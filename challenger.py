@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from blockchain import Wallet
+import blockchain
 
 
-Wallet()
+wallet = blockchain.Wallet()
 
-
+print(wallet.sign_challenge(blockchain.deserialize_to_challenge(open("challenge.json").read())))

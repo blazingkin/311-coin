@@ -6,12 +6,12 @@ import json
 
 class Block():
 
-    def __init__(self):
-        self.number = ""
-        self.type = ""
-        self.input = ""
-        self.output = ""
-        self.signature = ""
+    def __init__(self, number, typ, inp, output, signature):
+        self.number = number
+        self.typ = typ
+        self.input = inp
+        self.output = output
+        self.signature = signature
 
     def serialize():
         pass
@@ -88,7 +88,7 @@ def parse_challenge_object(obj):
 def deserialize_to_challenge(string):
     return parse_challenge_object(json.loads(string))
 
-print(deserialize_to_challenge(open("challenge.json").read()))
+
 
 class Wallet():
 
@@ -101,7 +101,7 @@ class Wallet():
         return SigningKey.generate()
         
     def sign_challenge(self, challenge):
-        pass
+        return self.private_key.sign(challenge.serialize()).encode('hex')
 
 
     def __init__(self):

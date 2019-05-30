@@ -4,7 +4,7 @@
         "op": "*",
         "left": {
             "op": "constant",
-            "value": 3
+            "value": 4
         },
         "right": {
             "op": "x"
