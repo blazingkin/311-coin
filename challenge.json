@@ -1,0 +1,16 @@
+{
+    "op": "+",
+    "left": {
+        "op": "*",
+        "left": {
+            "op": "constant",
+            "value": 3
+        },
+        "right": {
+            "op": "x"
+        }
+    },
+    "right": {
+        "op": "x"
+    }
+}
