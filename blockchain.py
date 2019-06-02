@@ -2,30 +2,64 @@
 from ecdsa import SigningKey
 import os
 import json
+from hashlib import sha1
 # Blockchain library function
 
 class Block():
 
-    def __init__(self, number, typ, inp, output, signature):
-        self.number = number
+    def __init__(self, typ, inp, output, signature):
         self.typ = typ
         self.input = inp
         self.output = output
         self.signature = signature
+        self.trans_number = self.number()
 
-    def serialize():
+    def number(self):
+        to_hash = {"input": self.input, "output": self.output, "signature": self.signature}
+        to_hash_str = json.dumps(to_hash)
+        return sha1(to_hash_str)
+
+    def serialize(self):
+        return json.dumps({"type": self.typ, "input": self.input, "output": self.output, "signature": self.signature})
+
+    def verify_signature(self):
+        to_hash = {"input": self.input, "type": self.type}
+        to_hash_str = json.dumps(to_hash)
+        calc_sig = sha1(to_hash_str)
+
+        # Constant time compare the two signatures
+        # First calculate the smallest length
+        smaller_length = len(calc_sig)
+        if len(self.signature) < smaller_length:
+            smaller_length = len(self.signature)
+        # Then iterate over the whole string without short circuiting
+        equal = True
+        for i in range(smaller_length):
+            if calc_sig[i] != self.signature[i]:
+                equal = False
+        return equal
+
+    def verify_output(self):
         pass
 
-    def verify_signature():
+    def verify_input(self):
         pass
 
-    def verify_output():
-        pass
+    def verify(self):
+        if self.trans_number > 0x00000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:
+            return False
+        if not self.verify_signature():
+            return False
+        self.verify_output()
+        return True
 
-    def verify():
-        verify_signature()
-        verify_output()
-
+def parse_block(stri):
+    obj = json.loads(stri)
+    core_fields = ["type", "input", "output", "signature"]
+    for f in core_fields:
+        if f not in obj:
+            raise ValueError("Expected block JSON to contain key {}".format(f))
+    return Block(obj["type"], obj["input"], obj["output"], obj["signature"])
 
 class Challenge():
 
