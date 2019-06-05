@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 from blockchain import Block
 from blockchain import Wallet
+from blockchain import deserialize_blockchain
 from hashlib import sha256
 import json
 
 class Miner:
 
-    def __init__(self, pubkeyhash):
+    def __init__(self, pubkeyhash, blockchain):
         self.pubkeyhash = pubkeyhash
 
     def mine(self, inp, typ, signatures):
@@ -19,10 +20,12 @@ class Miner:
         print(block.serialize())
 
 
+blockchain = deserialize_blockchain(open("base_blockchain.json").read())
+
 miner_wallet = Wallet()
 vk_string = miner_wallet.verifying_key.to_string().encode('hex')
 vk_hash = sha256(vk_string).hexdigest()
-miner = Miner(vk_hash)
+miner = Miner(vk_hash, blockchain)
 
 inp = {
     "problem": {
@@ -43,7 +46,7 @@ inp = {
     },
     "initial_value":  3,
     "public_key":  [vk_string],
-    "sources": "asdfasdf",
+    "sources": [{"kind": "miner", "block": "nonexistant"}],
     "to_miner": 1,
     "to_self": 1,
 }

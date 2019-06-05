@@ -24,6 +24,12 @@ class BlockChain():
                         return True
         return False
 
+    def serialize(self):
+        result = {}
+        for k in self.blocks:
+            result[k] = self.blocks[k].serialize()
+        return json.dumps(result)
+
     def is_self_reward_spent(self, hash):
         for _, block in self.blocks:
             for src in block.sources:
@@ -32,6 +38,9 @@ class BlockChain():
                         return True
         return False
     
+
+def deserialize_blockchain(stri):
+    return BlockChain(json.loads(stri))
 
 class Block():
 
@@ -51,9 +60,16 @@ class Block():
         for key in input_object["public_key"]:
             self.public_keys.append(VerifyingKey.from_string(key.decode('hex')))
         self.to_miner = input_object["to_miner"]
-        self.to_self = input_object["to_miner"]
+        self.to_self = input_object["to_self"]
         self.signatures = signatures
         self.initial_value = input_object["initial_value"]
+
+        self.sources = input_object["sources"]
+        required_source_fields = ["kind", "block"]
+        for source in self.sources:
+            for field in required_source_fields:
+                if not field in source:
+                    raise ValueError("A source ({}) was missing the required field {}".format(source, field))
 
         # Parse fields in the output
         if output != None:
@@ -198,8 +214,11 @@ class Wallet():
     def sign_input_and_type(self, inp, typ):
         return self.private_key.sign(json.dumps({"input": inp, "type": typ})).encode('hex')
 
-    def __init__(self):
-        self.private_key = self.get_signing_key()
+    def __init__(self, private_key=None):
+        if private_key == None:
+            self.private_key = self.get_signing_key()
+        else:
+            self.private_key = private_key
         self.verifying_key = self.private_key.get_verifying_key()
         self.cache_signing_key()
         
