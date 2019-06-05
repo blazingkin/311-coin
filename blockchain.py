@@ -13,34 +13,41 @@ class BlockChain():
         self.blocks = blocks
 
     def add_block(self, block):
-        self.blocks[block.number()] = block
+        if block.verify(self):
+            print("Added block {}".format(block.serialize()))
+            self.blocks[block.number()] = block
 
 
-    def is_miner_reward_spent(self, hash):
-        for _, block in self.blocks:
+    def is_miner_reward_spent(self, hsh):
+        for h in self.blocks:
+            block = self.blocks[h]
             for src in block.sources:
                 if src["kind"] == "miner":
-                    if src["block"] == "hash":
+                    if src["block"] == hsh:
                         return True
         return False
-
+    
     def serialize(self):
         result = {}
         for k in self.blocks:
             result[k] = self.blocks[k].serialize()
         return json.dumps(result)
 
-    def is_self_reward_spent(self, hash):
-        for _, block in self.blocks:
+    def is_self_reward_spent(self, hsh):
+        for h in self.blocks:
+            block = self.blocks[h]
             for src in block.sources:
                 if src["kind"] == "requester":
-                    if src["block"] == "hash":
+                    if src["block"] == hsh:
                         return True
         return False
     
 
 def deserialize_blockchain(stri):
-    return BlockChain(json.loads(stri))
+    blocks = json.loads(stri)
+    for b in blocks:
+        blocks[b] = parse_block(blocks[b])
+    return BlockChain(blocks)
 
 class Block():
 
@@ -48,7 +55,7 @@ class Block():
         self.typ = typ
         self.input = inp
         input_object = json.loads(inp)
-        input_fields = ["problem", "initial_value", "public_key", "sources", "to_miner", "to_self"]
+        input_fields = ["problem", "initial_value", "public_keys", "sources", "to_miner", "to_self"]
         for field in input_fields:
             if not field in input_object:
                 raise ValueError("Expected input to have value for {}".format(field))
@@ -57,7 +64,7 @@ class Block():
         # Parse fields in the input
         self.problem = parse_challenge_object(input_object["problem"])
         self.public_keys = []
-        for key in input_object["public_key"]:
+        for key in input_object["public_keys"]:
             self.public_keys.append(VerifyingKey.from_string(key.decode('hex')))
         self.to_miner = input_object["to_miner"]
         self.to_self = input_object["to_self"]
@@ -73,12 +80,15 @@ class Block():
 
         # Parse fields in the output
         if output != None:
-            output_object = json.loads(output)
+            if type(output) == type(""):
+                output_object = json.loads(output)
+            else:
+                output_object = output
             output_fields = ["solution", "public_key_hash"]
             for field in output_fields:
                 if not field in output_object:
                     raise ValueError("Expected output to have value for {}".format(field))
-            self.solution = output_fields["solution"]
+            self.solution = output_object["solution"]
             self.public_key_hash = output_object["public_key_hash"]
         else:
             self.solution = [self.initial_value]
@@ -100,7 +110,7 @@ class Block():
         return int(sha256(to_hash_str).hexdigest(), 16)
 
     def serialize(self):
-        return json.dumps({"type": self.typ, "input": self.input, "output": self.output, "signatures": self.signatures})
+        return json.dumps({"type": self.typ, "input": self.input, "output": self.calculate_output(), "signatures": self.signatures})
 
     def verify_signatures(self):
         if len(self.signatures) != len(self.public_keys):
@@ -111,21 +121,46 @@ class Block():
         return valid
 
     def verify_output(self):
-        pass
+        return True
 
     def verify_input(self, blockchain):
-        pass
+        if len(self.sources) != len(self.public_keys):
+            return False
+        for source, key in zip(self.sources, self.public_keys):
+            source_hash = u'{}'.format(int(source["block"], 16))
+            if not source_hash in blockchain.blocks:
+                print("Block does not exist")
+                return False
+            source_block = blockchain.blocks[source_hash]
+            if source["kind"] == "miner":
+                if blockchain.is_miner_reward_spent(source_hash):
+                    print("Spent")
+                    return False
+                pubkeyhash = sha256(key.to_string().encode('hex')).hexdigest()
+                if pubkeyhash != source_block.public_key_hash:
+                    print("Invalid pubkey hash")
+                    return False
+            elif source["kind"] == "requester":
+                if blockchain.is_self_reward_spent(source_hash):
+                    return False
+        return True
+            
 
     def verify_number(self):
         return self.number() < 0x0007FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
-    def verify(self):
-        if not self.verify_signature():
+    def verify(self, blockchain):
+        if not self.verify_signatures():
+            print("Signature failed")
             return False
         if not self.verify_number():
+            print("Invalid number")
             return False
-        self.verify_output()
-        return True
+        if not self.verify_input(blockchain):
+            print("Invalid input")
+            return False
+        return self.verify_output()
+
 
 def parse_block(stri):
     obj = json.loads(stri)
@@ -133,7 +168,7 @@ def parse_block(stri):
     for f in core_fields:
         if f not in obj:
             raise ValueError("Expected block JSON to contain key {}".format(f))
-    return Block(obj["type"], obj["input"], obj["output"], obj["signatures"])
+    return Block(obj["type"], obj["input"], obj["signatures"], obj["output"])
 
 class Challenge():
 

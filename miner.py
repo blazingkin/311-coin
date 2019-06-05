@@ -16,8 +16,7 @@ class Miner:
             raise ValueError("Bad mining request. Signature was not valid")
         while not block.verify_number():
             block.generate_next_term()
-        print(hex(block.number()))
-        print(block.serialize())
+        blockchain.add_block(block)
 
 
 blockchain = deserialize_blockchain(open("base_blockchain.json").read())
@@ -45,8 +44,8 @@ inp = {
         }
     },
     "initial_value":  3,
-    "public_key":  [vk_string],
-    "sources": [{"kind": "miner", "block": "nonexistant"}],
+    "public_keys":  [vk_string],
+    "sources": [{"kind": "miner", "block": "5c7eedc3476f1ef287da179c47ce5ca93b7ac7219e6714eed605c8a0bd59fd35"}],
     "to_miner": 1,
     "to_self": 1,
 }
@@ -55,5 +54,7 @@ typ = "TRANS"
 
 sig = miner_wallet.sign_input_and_type(inp, typ)
 
+
+miner.mine(inp, typ, [sig])
 
 miner.mine(inp, typ, [sig])
