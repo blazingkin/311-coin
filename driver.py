@@ -19,9 +19,12 @@ class MinerThread(threading.Thread):
             miner.update_blockchain(challenger.get_current_chain())
             inp, typ, sigs = challenger.get_current_challenge()
             try:
+                print("Thread-{} starting to mine".format(self.getName()))
                 block = miner.mine(inp, typ, sigs)
+                print("Thread-{} found a solution".format(self.getName()))
                 challenger.present_solution(block)
             except ValueError:
+                print("error!")
                 pass
 
 
@@ -33,4 +36,3 @@ if __name__ == "__main__":
     for i in range(10):
         miner = MinerThread(name="{}".format(i))
         miner.start()
-        time.sleep(0.1)

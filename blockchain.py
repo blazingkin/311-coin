@@ -97,7 +97,8 @@ class Block():
 
 
     def generate_next_term(self):
-        self.solution.append(self.problem.evaluate(self.solution[-1]))
+        result = self.problem.evaluate(self.solution[-1])
+        self.solution.append(result)
         self.output = self.calculate_output()
 
 
@@ -149,7 +150,7 @@ class Block():
             if source["kind"] == "miner":
                 print("Checking miner")
                 if blockchain.is_miner_reward_spent(source_hash):
-                    print("Spent")
+                    print("Double spend")
                     return False
                 pubkeyhash = sha256(key.to_string().encode('hex')).hexdigest()
                 if pubkeyhash != source_block.public_key_hash:
@@ -157,6 +158,7 @@ class Block():
                     return False
             elif source["kind"] == "requester":
                 if blockchain.is_self_reward_spent(source_hash):
+                    print("Double spend")
                     return False
         return True
             
@@ -203,6 +205,14 @@ class Challenge():
         "|": lambda x,y : x | y,
         "&": lambda x,y : x & y,    
     }
+
+    def pretty_print(self):
+        if self.op == "x":
+            return "x"
+        elif self.op == "constant":
+            return self.params[0]
+        else:
+            return "({} {} {})".format(self.params[0].pretty_print(), self.op, self.params[1].pretty_print())
 
     def __str__(self):
         return self.serialize()

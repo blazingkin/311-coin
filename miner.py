@@ -26,6 +26,7 @@ class Miner:
 
 
 if __name__ == "__main__":
+    blockchain = deserialize_blockchain(open("base_blockchain.json").read())
     miner_wallet = Wallet()
     vk_string = miner_wallet.verifying_key.to_string().encode('hex')
     vk_hash = sha256(vk_string).hexdigest()
@@ -60,4 +61,5 @@ if __name__ == "__main__":
     sig = miner_wallet.sign_input_and_type(inp, typ)
 
 
-    miner.mine(inp, typ, [sig])
+    block = miner.mine(inp, typ, [sig])
+    print(block.serialize())
