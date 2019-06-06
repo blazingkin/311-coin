@@ -4,6 +4,7 @@ from ecdsa import VerifyingKey
 import os
 import json
 from hashlib import sha256
+import random
 # Blockchain library function
 
 class BlockChain():
@@ -14,15 +15,17 @@ class BlockChain():
 
     def add_block(self, block):
         if block.verify(self):
-            print("Added block {}".format(block.serialize()))
-            self.blocks[block.number()] = block
+            print("Added block {}".format(block.string_number()))
+            self.blocks[block.string_number()] = block
 
 
     def is_miner_reward_spent(self, hsh):
         for h in self.blocks:
             block = self.blocks[h]
             for src in block.sources:
-                if src["kind"] == "miner":
+                if src["kind"].encode('utf-8') == u'miner':
+                    print(src["block"])
+                    print(hsh)
                     if src["block"] == hsh:
                         return True
         return False
@@ -37,7 +40,9 @@ class BlockChain():
         for h in self.blocks:
             block = self.blocks[h]
             for src in block.sources:
-                if src["kind"] == "requester":
+                if src["kind"].encode('utf-8') == u'requester':
+                    print(src["block"])
+                    print(hsh)
                     if src["block"] == hsh:
                         return True
         return False
@@ -109,6 +114,11 @@ class Block():
         to_hash_str = json.dumps(to_hash)
         return int(sha256(to_hash_str).hexdigest(), 16)
 
+    def string_number(self):
+        to_hash = {"input": self.input, "output": self.output, "signatures": self.signatures}
+        to_hash_str = json.dumps(to_hash)
+        return sha256(to_hash_str).hexdigest()
+
     def serialize(self):
         return json.dumps({"type": self.typ, "input": self.input, "output": self.calculate_output(), "signatures": self.signatures})
 
@@ -121,18 +131,29 @@ class Block():
         return valid
 
     def verify_output(self):
+        solution = self.output["solution"]
+        if self.initial_value != solution[0]:
+            return False
+        if len(solution) == 1:
+            return True
+        for i in range(100):
+            first_val = random.randrange(0, len(solution) - 1)
+            print("Checked {}".format(first_val))
+            if self.problem.evaluate(solution[first_val]) != solution[first_val + 1]:
+                return False
         return True
 
     def verify_input(self, blockchain):
         if len(self.sources) != len(self.public_keys):
             return False
         for source, key in zip(self.sources, self.public_keys):
-            source_hash = u'{}'.format(int(source["block"], 16))
+            source_hash = source["block"]
             if not source_hash in blockchain.blocks:
                 print("Block does not exist")
                 return False
             source_block = blockchain.blocks[source_hash]
             if source["kind"] == "miner":
+                print("Checking miner")
                 if blockchain.is_miner_reward_spent(source_hash):
                     print("Spent")
                     return False
@@ -238,9 +259,11 @@ class Wallet():
     def cache_signing_key(self):
         open("pkey.pem", "w").write(self.private_key.to_pem())
 
-    def get_signing_key(self):
-        if os.access("pkey.pem", os.R_OK):
-            return SigningKey.from_pem(open("pkey.pem", "r").read())
+    def get_signing_key(self, private_key_file=None):
+        if private_key_file == None:
+            private_key_file = "pkey.pem"
+        if os.access(private_key_file, os.R_OK):
+            return SigningKey.from_pem(open(private_key_file, "r").read())
         return SigningKey.generate()
         
     def sign_challenge(self, challenge):
@@ -249,9 +272,9 @@ class Wallet():
     def sign_input_and_type(self, inp, typ):
         return self.private_key.sign(json.dumps({"input": inp, "type": typ})).encode('hex')
 
-    def __init__(self, private_key=None):
+    def __init__(self, private_key=None, private_key_file=None):
         if private_key == None:
-            self.private_key = self.get_signing_key()
+            self.private_key = self.get_signing_key(private_key_file)
         else:
             self.private_key = private_key
         self.verifying_key = self.private_key.get_verifying_key()

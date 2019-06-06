@@ -27,6 +27,7 @@ pubkeyhash = sha256(base_wallet.verifying_key.to_string().encode('hex')).hexdige
 base_block = Block("base", dumps(inpt), base_wallet.sign_input_and_type(inpt, "base"), public_key_hash=pubkeyhash)
 
 block_chain = {}
-block_chain[base_block.number()] = base_block
+print(base_block.string_number())
+block_chain[base_block.string_number()] = base_block
 
 open("base_blockchain.json", "w").write(BlockChain(block_chain).serialize())

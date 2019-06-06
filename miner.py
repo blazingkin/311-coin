@@ -9,14 +9,19 @@ class Miner:
 
     def __init__(self, pubkeyhash, blockchain):
         self.pubkeyhash = pubkeyhash
+        self.blockchain = blockchain
 
     def mine(self, inp, typ, signatures):
         block = Block(typ, inp, signatures, public_key_hash=self.pubkeyhash)
+        print(self.blockchain.blocks.keys())
         if not block.verify_signatures():
             raise ValueError("Bad mining request. Signature was not valid")
+        if not block.verify_input(self.blockchain):
+            raise ValueError("Bad block given. The input could not be verified")
         while not block.verify_number():
             block.generate_next_term()
-        blockchain.add_block(block)
+        self.blockchain.add_block(block)
+        open("blockchain.json", "w").write(self.blockchain.serialize())
 
 
 blockchain = deserialize_blockchain(open("base_blockchain.json").read())
@@ -45,7 +50,7 @@ inp = {
     },
     "initial_value":  3,
     "public_keys":  [vk_string],
-    "sources": [{"kind": "miner", "block": "5c7eedc3476f1ef287da179c47ce5ca93b7ac7219e6714eed605c8a0bd59fd35"}],
+    "sources": [{"kind": "miner", "block": "9d6ffb21a7e3457bdb2fb6d7e1b401b9144b8236861ca44c866c0f625fbaf5d7"}],
     "to_miner": 1,
     "to_self": 1,
 }
@@ -54,7 +59,5 @@ typ = "TRANS"
 
 sig = miner_wallet.sign_input_and_type(inp, typ)
 
-
-miner.mine(inp, typ, [sig])
 
 miner.mine(inp, typ, [sig])
