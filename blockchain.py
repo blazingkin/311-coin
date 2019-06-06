@@ -15,7 +15,6 @@ class BlockChain():
 
     def add_block(self, block):
         if block.verify(self):
-            print("Added block {}".format(block.string_number()))
             self.blocks[block.string_number()] = block
 
 
@@ -24,8 +23,6 @@ class BlockChain():
             block = self.blocks[h]
             for src in block.sources:
                 if src["kind"].encode('utf-8') == u'miner':
-                    print(src["block"])
-                    print(hsh)
                     if src["block"] == hsh:
                         return True
         return False
@@ -41,8 +38,6 @@ class BlockChain():
             block = self.blocks[h]
             for src in block.sources:
                 if src["kind"].encode('utf-8') == u'requester':
-                    print(src["block"])
-                    print(hsh)
                     if src["block"] == hsh:
                         return True
         return False
@@ -138,7 +133,6 @@ class Block():
             return True
         for i in range(100):
             first_val = random.randrange(0, len(solution) - 1)
-            print("Checked {}".format(first_val))
             if self.problem.evaluate(solution[first_val]) != solution[first_val + 1]:
                 return False
         return True
